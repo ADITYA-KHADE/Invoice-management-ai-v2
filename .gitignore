@@ -1,0 +1,41 @@
+# OS / Editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+.venv/
+.env
+.env.*
+*.env
+
+# FastAPI / build artifacts
+*.log
+*.pid
+
+# Firebase / secrets
+serviceAccountKey.json
+
+# Node / Frontend
+node_modules/
+dist/
+build/
+.vite/
+*.tsbuildinfo
+
+# Testing / Coverage
+coverage/
+.coverage
+.pytest_cache/
+.mypy_cache/
+
+# Generated data
+uploads/

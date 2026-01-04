@@ -1,0 +1,15 @@
+import { PDFViewer } from "@embedpdf/react-pdf-viewer";
+
+export default function App() {
+  return (
+    <div style={{ height: "100vh" }}>
+      <PDFViewer
+        style={{ width: "100%", height: "100%" }}
+        config={{
+          src: "https://storage.googleapis.com/bitcode-dev.appspot.com/uploads/d4b32f37-e20e-432a-86a8-ca6c318992a7.pdf",
+          theme: { preference: "light" },
+        }}
+      />
+    </div>
+  );
+}
