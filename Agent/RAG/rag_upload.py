@@ -2,28 +2,21 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 import tempfile
-
 from fastapi import APIRouter, UploadFile, File, HTTPException, Request, status
-
 from RAG import Converter, load_pdf, image_upload
 from database import get_db
 import firebase
 
-
 router = APIRouter()
-
 
 ALLOWED_IMAGE_EXTS = {"jpg", "jpeg", "png", "webp"}
 OFFICE_EXTS = {"docx", "xlsx"}
 PDF_EXTS = {"pdf"}
 
-
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
-
 async def save_upload_to_temp(upload_file: UploadFile) -> str:
-    """Persist the uploaded file to a temporary path and return it."""
     suffix = Path(upload_file.filename or "").suffix
     if not suffix:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Filename with extension is required")
@@ -82,7 +75,6 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
     }
     metadata_with_format = {**metadata, "text_format": "invoice"}
 
-    indexing_result = None
     structured_invoice = None
     if final_ext == "pdf":
         structured_invoice = load_pdf.load_and_store_pdf(final_path, metadata_with_format, public_url)

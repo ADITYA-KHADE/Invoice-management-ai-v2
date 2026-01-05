@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { chatWithInvoice } from "../services/api";
+import { useEffect, useRef, useState } from "react";
+import { API_BASE, chatWithInvoice } from "../services/api";
 
 export default function Chatbot({ invoiceId }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -17,6 +17,9 @@ export default function Chatbot({ invoiceId }) {
   ]);
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(false);
+  const [wsReady, setWsReady] = useState(false);
+  const socketRef = useRef(null);
+  const botMessageIdRef = useRef(null);
 
   useEffect(() => {
     if (invoiceId) {
@@ -33,6 +36,72 @@ export default function Chatbot({ invoiceId }) {
     }
   }, [invoiceId]);
 
+  useEffect(() => {
+    if (!isOpen || !invoiceId) return undefined;
+
+    const protocol = API_BASE.startsWith("https") ? "wss" : "ws";
+    const wsUrl = `${API_BASE.replace(/^http/, protocol)}/api/chat/ws`;
+    const socket = new WebSocket(wsUrl);
+    socketRef.current = socket;
+    setWsReady(false);
+
+    socket.onopen = () => setWsReady(true);
+
+    socket.onclose = () => {
+      setWsReady(false);
+      socketRef.current = null;
+    };
+
+    socket.onerror = () => {
+      setWsReady(false);
+      socketRef.current = null;
+    };
+
+    socket.onmessage = (event) => {
+      const data = event.data;
+
+      if (data === "[DONE]") {
+        setLoading(false);
+        botMessageIdRef.current = null;
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(data);
+        if (parsed?.error) {
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === botMessageIdRef.current
+                ? { ...msg, text: parsed.error }
+                : msg
+            )
+          );
+          setLoading(false);
+          botMessageIdRef.current = null;
+          return;
+        }
+      } catch (_err) {
+        // Non-JSON payloads are streamed tokens.
+      }
+
+      if (botMessageIdRef.current) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === botMessageIdRef.current
+              ? { ...msg, text: `${msg.text}${data}` }
+              : msg
+          )
+        );
+      }
+    };
+
+    return () => {
+      socket.close();
+      socketRef.current = null;
+      setWsReady(false);
+    };
+  }, [isOpen, invoiceId]);
+
   const handleSend = async () => {
     if (!inputValue.trim()) return;
 
@@ -42,7 +111,7 @@ export default function Chatbot({ invoiceId }) {
       sender: "user",
     };
 
-    setMessages([...messages, newMessage]);
+    setMessages((prev) => [...prev, newMessage]);
     const query = inputValue;
     setInputValue("");
 
@@ -60,30 +129,53 @@ export default function Chatbot({ invoiceId }) {
 
     // Call the chat API
     setLoading(true);
+
+    const botMessageId = Date.now();
+    botMessageIdRef.current = botMessageId;
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: botMessageId,
+        text: "",
+        sender: "bot",
+      },
+    ]);
+
+    const payload = JSON.stringify({
+      invoice_id: invoiceId,
+      input_query: query,
+      k: 4,
+    });
+
+    if (wsReady && socketRef.current?.readyState === WebSocket.OPEN) {
+      socketRef.current.send(payload);
+      return;
+    }
+
     try {
       const response = await chatWithInvoice(invoiceId, query);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: prev.length + 1,
-          text:
-            response.response ||
-            response.answer ||
-            "I couldn't find an answer to your question.",
-          sender: "bot",
-        },
-      ]);
+      const text =
+        response.response ||
+        response.answer ||
+        "I couldn't find an answer to your question.";
+
+      setMessages((prev) =>
+        prev.map((msg) => (msg.id === botMessageId ? { ...msg, text } : msg))
+      );
     } catch (error) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: prev.length + 1,
-          text: "Sorry, I encountered an error processing your request. Please try again.",
-          sender: "bot",
-        },
-      ]);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === botMessageId
+            ? {
+                ...msg,
+                text: "Sorry, I encountered an error processing your request. Please try again.",
+              }
+            : msg
+        )
+      );
     } finally {
       setLoading(false);
+      botMessageIdRef.current = null;
     }
   };
 
