@@ -7,10 +7,7 @@ export default function Chatbot({ invoiceId }) {
     {
       id: 1,
       text: invoiceId
-        ? `Hello! I'm your AI assistant for invoice ${invoiceId.substring(
-            0,
-            8
-          )}... Ask me anything about this invoice.`
+        ? `Hello! I'm Shakti AI assistant, Ask me anything about this invoice.`
         : "Hello! I'm your AI assistant. Navigate to an invoice to ask questions.",
       sender: "bot",
     },
