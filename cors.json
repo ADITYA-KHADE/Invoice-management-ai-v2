@@ -1,6 +1,6 @@
 [
   {
-    "origin": ["http://localhost:5173"],
+    "origin": ["http://localhost:5173","https://invoice-management-ai-v2.onrender.com"],
     "method": ["GET", "HEAD"],
     "responseHeader": ["Content-Type", "Content-Length"],
     "maxAgeSeconds": 3600
